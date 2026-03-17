@@ -1,2 +1,4 @@
 private/
 test_output/
+.DS_Store
+__pycache__/
