@@ -1,52 +1,52 @@
-powerplant,closest_station
-大潭電廠太陽光電發電站/Datang Power Plant Solar Power Station,新屋
-中大D/S太陽光電發電站/Zhongda D/S Solar Power Station,新屋
-中部儲運中心太陽光電發電站/Central Storage and Transportation Center Solar Power Station,臺中
-東勢新伯公太陽光電發電站/Dongshi Xinbogong Solar Power Station,臺中
-卓蘭會館太陽光電發電站/Zhuolan Hostel Solar Power Station,臺中
-台中電廠太陽光電發電站/Taichung Power Plant Solar Power Station,臺中
-台中龍井太陽光電發電站/Taichung Longjing Solar Power Station,臺中
-后里E/S太陽光電發電站/Houli E/S Solar Power Station,臺中
-嘉義民雄太陽光電發電站/Chiayi Minxiong Solar Power Station,嘉義
-永安鹽灘地太陽光電發電站/Yongan Salt Flats Solar Power Station,高雄
-興達電廠太陽光電發電站/Xingda Power Plant Solar Power Station,臺南
-路北E/S太陽光電發電站/Lubei E/S Solar Power Station,高雄
-核三廠太陽光電發電站/3rd Nuclear Power Plants Solar Power Station,恆春
-澎湖尖山太陽光電發電站/Penghu jianshan Solar Power Station,澎湖
-澎湖七美太陽光電發電站/Penghu Qimei Solar Power Station,東吉島
-金門金沙太陽光電發電站/Kinmen Jinsha Solar Power Station,金門
-龍潭E/S太陽光電發電站/Longtan E/S Solar Power Station,新屋
-竹工E/S太陽光電發電站/Zhugong E/S Solar Power Station,新竹
-中科E/S太陽光電發電站/Zhongke E/S Solar Power Station,臺中
-彰林E/S太陽光電發電站/Changlin E/S Solar Power Station,田中
-台南七股太陽光電發電站/Tainan Qigu Solar Power Station,永康
-高雄E/S太陽光電發電站/Kaohsiung E/S Solar Power Station,高雄
-燕巢倉庫太陽光電發電站/Yanchao Warehouse Solar Power Station,高雄
-大潭電廠GIS廠房太陽光電發電站/Datang Power Plant GIS Solar Power Station,新屋
-北部儲運中心太陽光電發電站/Northern Storage and Transportation Center Solar Power Station,新屋
-彰化彰濱太陽光電發電站/Changhua Changbin Solar Power Station,臺中
-南投大彎太陽光電發電站/Nantou Dawan Solar Power Station,日月潭
-金門鵲山太陽光電發電站/Kinmen Queshan Solar Power Station,金門
-金門塔山太陽光電發電站/Kinmen Tashan Solar Power Station,金門
-馬祖珠山太陽光電發電站/Mazu Zhushan Solar Power Station,馬祖
-蘭嶼電廠太陽光電發電站/Lanyu Power Plant Solar Power Station,蘭嶼
-蘭嶼貯存場太陽光電發電站/Lanyu Storage Unit Solar Power Station,蘭嶼
-高雄保寧太陽光電發電站/Kaohsiung Baoning Solar Power Station,高雄
-台南鹽田太陽光電發電站/Tainan salt field Solar Power Station,永康
-台中電廠建物太陽光電發電站/Taichung Power Plant Building Solar Power Station,臺中
-台中電廠GIS廠房太陽光電發電站/Taichung Power Plant GIS Solar Power Station,臺中
-高雄E/S停車棚太陽光電發電站/Kaohsiung E/S Parking Shed Solar Power Station,高雄
-鳳山水庫太陽光電發電站/Fengshan Reservoir Solar Power Station,高雄
-東興淨水場太陽光電發電站/Dongxing Water Treatment Plant Solar Power Station,後龍
-平鎮淨水場太陽光電發電站/Pingzhen Water Treatment Plant Solar Power Station,新屋
-大湳淨水場太陽光電發電站/Danan Water Treatment Plant Solar Power Station,新北
-龜山第三加壓站太陽光電發電站/Guishan No.3 Pumping Station Solar Power Station,臺北
-"淡水3.5萬噸配水池太陽光電發電站/Danshui Distribution Reservoir(35,000 tons) Solar Power Station",淡水
-龍潭淨水場太陽光電發電站/Longtan Water Treatment Plant Solar Power Station,新竹
-澎湖尖山小再太陽光電發電站/Penghu jianshan Small Scale Renewable Energy Solar Power Station,澎湖
-台南七股II太陽光電發電站/Tainan Qigu II Solar Power Station,永康
-義竹工作站太陽光電發電站/Yizhu Workhouse Solar Power Station,嘉義
-台南鹽田電氣室太陽光電發電站/Tainan salt field Electrical Room Solar Power Station,永康
-嘉義分所太陽光電發電站/Chiayi Agricultural Experiment Branch Solar Power Station,嘉義
-高訓中心太陽光電發電站/Kaohsiung Training Institute Solar Power Station,高雄
-金門酒廠太陽光電發電站/Kinmen Kaoliang Liquor Inc. Solar Power Station,金門
+powerplant,station_1,station_2,station_3,station_4,station_5
+大潭電廠太陽光電發電站/Datang Power Plant Solar Power Station,新屋,新竹,淡水,臺北,後龍
+中大D/S太陽光電發電站/Zhongda D/S Solar Power Station,新屋,新竹,臺北,新北,淡水
+中部儲運中心太陽光電發電站/Central Storage and Transportation Center Solar Power Station,臺中,後龍,田中,日月潭,新竹
+東勢新伯公太陽光電發電站/Dongshi Xinbogong Solar Power Station,臺中,日月潭,田中,後龍,新竹
+卓蘭會館太陽光電發電站/Zhuolan Hostel Solar Power Station,臺中,後龍,日月潭,田中,新竹
+台中電廠太陽光電發電站/Taichung Power Plant Solar Power Station,臺中,田中,日月潭,後龍,古坑
+台中龍井太陽光電發電站/Taichung Longjing Solar Power Station,臺中,田中,日月潭,後龍,古坑
+后里E/S太陽光電發電站/Houli E/S Solar Power Station,臺中,後龍,田中,日月潭,新竹
+嘉義民雄太陽光電發電站/Chiayi Minxiong Solar Power Station,嘉義,古坑,阿里山,田中,玉山
+永安鹽灘地太陽光電發電站/Yongan Salt Flats Solar Power Station,高雄,臺南,永康,東吉島,嘉義
+興達電廠太陽光電發電站/Xingda Power Plant Solar Power Station,臺南,高雄,永康,東吉島,嘉義
+路北E/S太陽光電發電站/Lubei E/S Solar Power Station,高雄,臺南,永康,東吉島,嘉義
+核三廠太陽光電發電站/3rd Nuclear Power Plants Solar Power Station,恆春,大武,蘭嶼,高雄,臺東
+澎湖尖山太陽光電發電站/Penghu jianshan Solar Power Station,澎湖,東吉島,嘉義,永康,臺南
+澎湖七美太陽光電發電站/Penghu Qimei Solar Power Station,東吉島,澎湖,臺南,永康,高雄
+金門金沙太陽光電發電站/Kinmen Jinsha Solar Power Station,金門,澎湖,東吉島,田中,臺中
+龍潭E/S太陽光電發電站/Longtan E/S Solar Power Station,新屋,新竹,臺北,淡水,新北
+竹工E/S太陽光電發電站/Zhugong E/S Solar Power Station,新竹,新屋,後龍,新北,臺北
+中科E/S太陽光電發電站/Zhongke E/S Solar Power Station,臺中,田中,日月潭,後龍,古坑
+彰林E/S太陽光電發電站/Changlin E/S Solar Power Station,田中,臺中,古坑,日月潭,嘉義
+台南七股太陽光電發電站/Tainan Qigu Solar Power Station,永康,臺南,高雄,嘉義,東吉島
+高雄E/S太陽光電發電站/Kaohsiung E/S Solar Power Station,高雄,臺南,永康,大武,恆春
+燕巢倉庫太陽光電發電站/Yanchao Warehouse Solar Power Station,高雄,臺南,永康,大武,臺東
+大潭電廠GIS廠房太陽光電發電站/Datang Power Plant GIS Solar Power Station,新屋,新竹,淡水,臺北,後龍
+北部儲運中心太陽光電發電站/Northern Storage and Transportation Center Solar Power Station,新屋,新竹,淡水,臺北,新北
+彰化彰濱太陽光電發電站/Changhua Changbin Solar Power Station,臺中,田中,古坑,日月潭,嘉義
+南投大彎太陽光電發電站/Nantou Dawan Solar Power Station,日月潭,田中,阿里山,古坑,玉山
+金門鵲山太陽光電發電站/Kinmen Queshan Solar Power Station,金門,澎湖,東吉島,田中,嘉義
+金門塔山太陽光電發電站/Kinmen Tashan Solar Power Station,金門,澎湖,東吉島,田中,嘉義
+馬祖珠山太陽光電發電站/Mazu Zhushan Solar Power Station,馬祖,新屋,新竹,淡水,後龍
+蘭嶼電廠太陽光電發電站/Lanyu Power Plant Solar Power Station,蘭嶼,大武,恆春,臺東,成功
+蘭嶼貯存場太陽光電發電站/Lanyu Storage Unit Solar Power Station,蘭嶼,大武,恆春,臺東,成功
+高雄保寧太陽光電發電站/Kaohsiung Baoning Solar Power Station,高雄,臺南,永康,大武,臺東
+台南鹽田太陽光電發電站/Tainan salt field Solar Power Station,永康,臺南,東吉島,嘉義,高雄
+台中電廠建物太陽光電發電站/Taichung Power Plant Building Solar Power Station,臺中,田中,日月潭,後龍,古坑
+台中電廠GIS廠房太陽光電發電站/Taichung Power Plant GIS Solar Power Station,臺中,田中,日月潭,後龍,古坑
+高雄E/S停車棚太陽光電發電站/Kaohsiung E/S Parking Shed Solar Power Station,高雄,臺南,永康,大武,恆春
+鳳山水庫太陽光電發電站/Fengshan Reservoir Solar Power Station,高雄,臺南,大武,永康,恆春
+東興淨水場太陽光電發電站/Dongxing Water Treatment Plant Solar Power Station,後龍,新竹,新屋,臺中,新北
+平鎮淨水場太陽光電發電站/Pingzhen Water Treatment Plant Solar Power Station,新屋,新竹,新北,臺北,淡水
+大湳淨水場太陽光電發電站/Danan Water Treatment Plant Solar Power Station,新北,臺北,新屋,淡水,新竹
+龜山第三加壓站太陽光電發電站/Guishan No.3 Pumping Station Solar Power Station,臺北,淡水,新北,竹子湖,鞍部
+"淡水3.5萬噸配水池太陽光電發電站/Danshui Distribution Reservoir(35,000 tons) Solar Power Station",淡水,鞍部,竹子湖,臺北,新北
+龍潭淨水場太陽光電發電站/Longtan Water Treatment Plant Solar Power Station,新竹,新屋,新北,臺北,淡水
+澎湖尖山小再太陽光電發電站/Penghu jianshan Small Scale Renewable Energy Solar Power Station,澎湖,東吉島,嘉義,永康,臺南
+台南七股II太陽光電發電站/Tainan Qigu II Solar Power Station,永康,臺南,高雄,嘉義,東吉島
+義竹工作站太陽光電發電站/Yizhu Workhouse Solar Power Station,嘉義,永康,臺南,古坑,阿里山
+台南鹽田電氣室太陽光電發電站/Tainan salt field Electrical Room Solar Power Station,永康,臺南,東吉島,嘉義,高雄
+嘉義分所太陽光電發電站/Chiayi Agricultural Experiment Branch Solar Power Station,嘉義,古坑,阿里山,田中,玉山
+高訓中心太陽光電發電站/Kaohsiung Training Institute Solar Power Station,高雄,臺南,永康,大武,恆春
+金門酒廠太陽光電發電站/Kinmen Kaoliang Liquor Inc. Solar Power Station,金門,澎湖,東吉島,田中,嘉義
