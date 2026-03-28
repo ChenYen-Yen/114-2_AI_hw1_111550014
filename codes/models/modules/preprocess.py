@@ -6,7 +6,12 @@ warnings.filterwarnings('ignore')
 
 
 class SolarDataPreprocessor:
-    """太陽能發電數據預處理模塊"""
+    """太陽能發電數據預處理模塊
+    
+    特別注意事項：
+    - 降雨量為 NaN 且降雨日數為 0 的情況代表 T 值（微量降水），在填充時應使用 0.0
+    - 這類情況通常表示該月份沒有測定的可測量降水量
+    """
     
     def __init__(self, data_path=None):
         """
@@ -22,6 +27,7 @@ class SolarDataPreprocessor:
         self.data_path = data_path
         self.df = None
         self.df_processed = None
+        self.missing_rainfall_t_value_count = 0  # 追蹤 T 值（NaN + 降雨日數=0）的數量
         
     def load_data(self):
         """讀取數據"""
@@ -31,8 +37,23 @@ class SolarDataPreprocessor:
         return self.df
     
     def explore_data(self):
-        """數據探索和統計"""
+        """數據探索和統計
+        
+        特別關注：
+        - 標記降雨量為 NaN 且降雨日數為 0 的記錄（原始 T 值）
+        """
         print("\n【數據探索】")
+        
+        # 檢查 T 值情況（降雨量 NaN + 降雨日數 0）
+        rainfall_nan = self.df['累積雨量'].isna()
+        rainy_days_zero = self.df['降雨日數'] == 0.0
+        t_value_records = rainfall_nan & rainy_days_zero
+        self.missing_rainfall_t_value_count = t_value_records.sum()
+        
+        print("\n【重要提示】")
+        print(f"⚠️  降雨量 NaN + 降雨日數 0 的記錄數: {self.missing_rainfall_t_value_count} 筆")
+        print("   → 這些是原始 T 值（微量降水），應填充為 0.0")
+        
         print("\n--- 基本信息 ---")
         print(f"時間範圍: {self.df['年度/Year'].min()}-{self.df['月份/Month'].astype(str).str.zfill(2).min()} "
               f"至 {self.df['年度/Year'].max()}-{self.df['月份/Month'].astype(str).str.zfill(2).max()}")
@@ -53,10 +74,15 @@ class SolarDataPreprocessor:
             '缺失率%': missing_pct.values
         })
         missing_df = missing_df[missing_df['缺失數'] > 0].sort_values('缺失率%', ascending=False)
+        
         if len(missing_df) > 0:
             print(missing_df.to_string(index=False))
+            print("\n【缺失值處理說明】")
+            if self.missing_rainfall_t_value_count > 0:
+                print(f"✓ 降雨量缺失中，{self.missing_rainfall_t_value_count} 筆是 T 值（降雨日數=0）")
+                print(f"  → 其餘 {missing['累積雨量'] - self.missing_rainfall_t_value_count} 筆為其他缺失")
         else:
-            print("✓ 沒有缺失值")
+            print("✓ 沒有其他缺失值")
         
         print("\n--- 數值欄位統計 ---")
         numeric_cols = self.df.select_dtypes(include=[np.number]).columns
@@ -72,39 +98,67 @@ class SolarDataPreprocessor:
     
     def clean_data(self, 
                    drop_columns=None,
-                   handle_missing='mean',
-                   remove_outliers=False):
+                   handle_missing='smart',
+                   remove_outliers=False,
+                   drop_date_columns=True):
         """
         數據清理
         
         Args:
             drop_columns: 要刪除的欄位列表
-            handle_missing: 缺失值處理方式 ('mean', 'drop', 'forward_fill')
+            handle_missing: 缺失值處理方式 ('smart', 'mean', 'drop', 'forward_fill')
+                          'smart' 會特別處理 T 值（降雨量 NaN 但降雨日數=0）填為 0.0
             remove_outliers: 是否移除異常值
+            drop_date_columns: 是否刪除日期欄位（預設 True，先忽略 date 測試）
         """
         print("\n【數據清理】")
         self.df_processed = self.df.copy()
         
+        # 先刪除所有日期欄位（輕量級路線：先測試不含 date）
+        if drop_date_columns:
+            date_cols = [col for col in self.df_processed.columns if '日期' in col]
+            if date_cols:
+                print(f"✓ 刪除日期欄位: {date_cols}")
+                self.df_processed = self.df_processed.drop(columns=date_cols, errors='ignore')
+        
         # 1. 刪除不需要的欄位
         if drop_columns:
-            print(f"✓ 刪除欄位: {drop_columns}")
+            print(f"✓ 刪除自訂欄位: {drop_columns}")
             self.df_processed = self.df_processed.drop(columns=drop_columns, errors='ignore')
         
         # 2. 處理缺失值
         print(f"\n✓ 處理缺失值 (方法: {handle_missing})")
         numeric_cols = self.df_processed.select_dtypes(include=[np.number]).columns
         
-        if handle_missing == 'mean':
+        if handle_missing == 'smart':
+            # 特別處理 T 值：降雨量 NaN + 降雨日數 0 → 填為 0.0
+            t_value_mask = (self.df_processed['累積雨量'].isna() & 
+                           (self.df_processed['降雨日數'] == 0.0))
+            
+            if t_value_mask.sum() > 0:
+                print(f"  → 填充 T 值（降雨量=0.0）: {t_value_mask.sum()} 筆")
+                self.df_processed.loc[t_value_mask, '累積雨量'] = 0.0
+            
+            # 其他缺失值用平均值填充
+            for col in numeric_cols:
+                remaining_na = self.df_processed[col].isna().sum()
+                if remaining_na > 0:
+                    self.df_processed[col].fillna(self.df_processed[col].mean(), inplace=True)
+                    print(f"  → {col}: 用平均值填充 {remaining_na} 筆")
+        
+        elif handle_missing == 'mean':
             for col in numeric_cols:
                 if self.df_processed[col].isnull().sum() > 0:
                     self.df_processed[col].fillna(self.df_processed[col].mean(), inplace=True)
+        
         elif handle_missing == 'forward_fill':
             self.df_processed[numeric_cols] = self.df_processed[numeric_cols].fillna(method='ffill')
             self.df_processed[numeric_cols] = self.df_processed[numeric_cols].fillna(method='bfill')
+        
         elif handle_missing == 'drop':
             self.df_processed = self.df_processed.dropna()
         
-        print(f"  缺失值處理後: {self.df_processed.isnull().sum().sum()} 個缺失值")
+        print(f"  清理後缺失值: {self.df_processed.isnull().sum().sum()} 個")
         
         # 3. 移除異常值（可選）
         if remove_outliers:
@@ -128,54 +182,49 @@ class SolarDataPreprocessor:
         print(f"\n✓ 清理後數據形狀: {self.df_processed.shape}")
         return self.df_processed
     
-    def add_features(self, include_efficiency=True, 
-                     include_time_features=True,
-                     include_station_encoding=True):
+    def add_features(self, include_efficiency=False, 
+                     include_time_features=False,
+                     include_station_encoding=False):
         """
-        特徵工程
+        特徵工程（預設不添加任何欄位）
         
         Args:
-            include_efficiency: 是否添加發電效率特徵
-            include_time_features: 是否添加時間特徵
-            include_station_encoding: 是否對測站進行編碼
+            include_efficiency: 是否添加發電效率特徵（冗余，已有原始值）
+            include_time_features: 是否添加時間特徵（已有 year+month）
+            include_station_encoding: 是否對測站進行編碼（已有 closest_station）
+        
+        使用說明：
+        - 先用原始欄位測試模型
+        - 之後逐步添加新特徵：.add_features(include_time_features=True)
         """
         print("\n【特徵工程】")
+        
+        if not include_efficiency and not include_time_features and not include_station_encoding:
+            print("✓ 跳過欄位添加（保持精簡，先用原始資料測試）")
+            return self.df_processed
         
         # 1. 發電效率特徵
         if include_efficiency:
             print("✓ 添加發電效率特徵")
-            # 重新計算發電效率（如果需要驗證原始計算）
             self.df_processed['calculated_efficiency'] = (
                 self.df_processed['發電量(度)/Power Generation(kWh)'] / 
-                self.df_processed['裝置容量(瓩)/Installed Capacity(kW)'] / 30  # 平均日效率
+                self.df_processed['裝置容量(瓩)/Installed Capacity(kW)'] / 30
             )
-            # 與原始的對比
-            self.df_processed['efficiency_original'] = self.df_processed['平均單位裝置容量每日發電量/Average of Each Unit Power Generatioon Per Day']
         
         # 2. 時間特徵
         if include_time_features:
             print("✓ 添加時間特徵")
-            self.df_processed['year_month'] = (
-                self.df_processed['年度/Year'].astype(str) + '-' + 
-                self.df_processed['月份/Month'].astype(str).str.zfill(2)
-            )
-            # 季節特徵
             self.df_processed['season'] = self.df_processed['月份/Month'].apply(self._get_season)
-            # 季節編碼
             season_map = {'春': 0, '夏': 1, '秋': 2, '冬': 3}
             self.df_processed['season_encoded'] = self.df_processed['season'].map(season_map)
         
         # 3. 測站編碼
         if include_station_encoding:
             print("✓ 添加測站編碼")
-            # 保留測站名稱
-            self.df_processed['station_chi_name'] = self.df_processed['closest_station']
-            # 將測站名稱轉換為數值編碼
             station_map = {station: idx for idx, station in enumerate(
                 self.df_processed['closest_station'].unique()
             )}
             self.df_processed['station_encoded'] = self.df_processed['closest_station'].map(station_map)
-            
             print(f"  測站映射表: {station_map}")
         
         return self.df_processed
@@ -218,11 +267,12 @@ class SolarDataPreprocessor:
     
     def get_feature_columns(self):
         """
-        獲取模型的特徵欄位
+        獲取模型的特徵欄位（當前版本：只返回原始欄位）
         
         Returns:
             包含不同類別特徵的字典
         """
+        # 原始欄位（不添加新的計算欄位）
         weather_cols = [
             '溫度_平均', '溫度_最高', '溫度_最低',
             '累積雨量', '降雨日數',
@@ -236,24 +286,21 @@ class SolarDataPreprocessor:
             '平均單位裝置容量每日發電量/Average of Each Unit Power Generatioon Per Day'
         ]
         
-        if 'calculated_efficiency' in self.df_processed.columns:
-            power_cols.append('calculated_efficiency')
-            power_cols.append('efficiency_original')
+        location_cols = [
+            'closest_station'
+        ]
         
-        time_cols = []
-        if 'season_encoded' in self.df_processed.columns:
-            time_cols.append('season_encoded')
-        
-        location_cols = []
-        if 'station_encoded' in self.df_processed.columns:
-            location_cols.append('station_encoded')
+        time_cols = [
+            '年度/Year',
+            '月份/Month'
+        ]
         
         return {
             'weather': weather_cols,
             'power': power_cols,
-            'time': time_cols,
             'location': location_cols,
-            'all': weather_cols + power_cols + time_cols + location_cols
+            'time': time_cols,
+            'all': weather_cols + power_cols + location_cols + time_cols
         }
     
     @staticmethod
@@ -279,7 +326,7 @@ class SolarDataPreprocessor:
 
 
 def main():
-    """示例使用"""
+    """示例使用 - 輕量級路線：先用原始欄位測試"""
     # 初始化預處理器
     preprocessor = SolarDataPreprocessor()
     
@@ -289,42 +336,42 @@ def main():
     # 2. 數據探索
     preprocessor.explore_data()
     
-    # 3. 數據清理
-    # 建議刪除的欄位：
-    # - 溫度_最高日期, 溫度_最低日期, 最大十分鐘風速日期, 最大瞬間風日期, 最大瞬間風向, 最大十分鐘風向
-    #   這些日期欄位對模型預測幫助有限
-    drop_cols = [
-        '溫度_最高日期', '溫度_最低日期', 
-        '最大十分鐘風速日期', '最大瞬間風日期',
-        '最大十分鐘風向', '最大瞬間風向'
-    ]
-    
+    # 3. 數據清理（刪除日期欄位，處理缺失值）
     preprocessor.clean_data(
-        drop_columns=drop_cols,
-        handle_missing='mean',
-        remove_outliers=False
+        drop_columns=None,  # 不刪除其他欄位
+        handle_missing='smart',  # 特別處理 T 值（NaN 但降雨日數=0）
+        drop_date_columns=True  # 刪除所有日期欄位
     )
     
-    # 4. 特徵工程
-    preprocessor.add_features(
-        include_efficiency=True,
-        include_time_features=True,
-        include_station_encoding=True
-    )
+    # 4. 【暫不添加新特徵】先用原始欄位測試
+    # 之後可逐步添加：
+    # preprocessor.add_features(include_time_features=True)
+    print("\n【特徵工程】")
+    print("✓ 跳過欄位添加（保持精簡，先用原始資料測試）")
     
     # 5. 獲取特徵列表
     feature_cols = preprocessor.get_feature_columns()
-    print("\n【特徵列表】")
+    print("\n【可用特徵列表】")
     for category, cols in feature_cols.items():
-        print(f"{category}: {cols}")
+        if category != 'all':
+            print(f"{category}: {cols}")
+        else:
+            print(f"\n✓ 所有特徵 ({len(cols)} 個):")
+            print(f"  {cols}")
     
     # 6. 準備訓練集和測試集
     train_data, test_data = preprocessor.prepare_train_test(by_time=True)
     
     # 7. 保存處理後的數據
-    preprocessor.save_processed_data()
+    output_path = preprocessor.save_processed_data()
     
     print("\n✓ 預處理完成！")
+    print(f"\n【最終數據形狀】")
+    print(f"處理後欄位數: {preprocessor.df_processed.shape[1]}")
+    print(f"欄位列表:")
+    for col in preprocessor.df_processed.columns:
+        print(f"  - {col}")
+    
     return preprocessor
 
 
