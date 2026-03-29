@@ -73,7 +73,7 @@ class SolarDataPreprocessor:
         
         Args:
             drop_columns: 要刪除的欄位列表
-            handle_missing: 缺失值處理方式 ('smart', 'mean', 'drop', 'forward_fill')
+            handle_missing: 缺失值處理方式 ('smart', 'mean', 'zero', 'drop', 'forward_fill')
             remove_outliers: 是否移除異常值
             drop_date_columns: 是否刪除日期欄位
         """
@@ -115,6 +115,14 @@ class SolarDataPreprocessor:
                 if self.df_processed[col].isnull().sum() > 0:
                     self.df_processed[col].fillna(self.df_processed[col].mean(), inplace=True)
         
+        elif handle_missing == 'zero':
+            # 用 0 填充所有缺失值
+            for col in numeric_cols:
+                na_count = self.df_processed[col].isna().sum()
+                if na_count > 0:
+                    self.df_processed[col].fillna(0, inplace=True)
+                    print(f"  → {col}: 零值填充 {na_count} 筆")
+        
         elif handle_missing == 'forward_fill':
             self.df_processed[numeric_cols] = self.df_processed[numeric_cols].fillna(method='ffill')
             self.df_processed[numeric_cols] = self.df_processed[numeric_cols].fillna(method='bfill')
@@ -150,6 +158,57 @@ class SolarDataPreprocessor:
                 self.df_processed['closest_station'].unique()
             )}
             self.df_processed['station_encoded'] = self.df_processed['closest_station'].map(station_map)
+        
+        return self.df_processed
+    
+    def create_simplified_mode(self):
+        """
+        創建簡化模式：
+        - 移除：年度、月份、日期、平均單位裝置容量每日發電量
+        - 合併：發電比 = 發電量 / 裝置容量
+        - 需在 clean_data 之後調用
+        
+        Returns:
+            處理後的 DataFrame
+        """
+        print("\n【簡化模式轉換】")
+        
+        if self.df_processed is None:
+            raise ValueError("請先調用 clean_data() 方法")
+        
+        # 移除指定欄位
+        cols_to_remove = [
+            '年度/Year',
+            '月份/Month',
+            '平均單位裝置容量每日發電量/Average of Each Unit Power Generatioon Per Day'
+        ]
+        
+        existing_cols_to_remove = [col for col in cols_to_remove if col in self.df_processed.columns]
+        
+        if existing_cols_to_remove:
+            self.df_processed = self.df_processed.drop(columns=existing_cols_to_remove)
+            print(f"✓ 已移除欄位: {', '.join(existing_cols_to_remove)}")
+        
+        # 創建發電比特徵
+        capacity_col = '裝置容量(瓩)/Installed Capacity(kW)'
+        generation_col = '發電量(度)/Power Generation(kWh)'
+        
+        if capacity_col in self.df_processed.columns and generation_col in self.df_processed.columns:
+            # 計算發電比 (避免除以零)
+            self.df_processed['發電比_Power_Ratio'] = (
+                self.df_processed[generation_col] / 
+                self.df_processed[capacity_col].replace(0, np.nan)
+            )
+            print(f"✓ 已創建發電比特徵: {self.df_processed['發電比_Power_Ratio'].describe()}")
+            
+            # 移除原始的裝置容量和發電量欄位
+            self.df_processed = self.df_processed.drop(
+                columns=[capacity_col, generation_col],
+                errors='ignore'
+            )
+            print(f"✓ 已移除原始特徵: {capacity_col}, {generation_col}")
+        
+        print(f"✓ 簡化模式後數據形狀: {self.df_processed.shape}")
         
         return self.df_processed
     
@@ -238,6 +297,11 @@ def main():
     
     preprocessor.load_data()
     preprocessor.explore_data()
+    
+    # 模式 1: 預設模式（使用平均值填充）
+    print("\n" + "="*80)
+    print("【模式 1：預設模式（平均值填充）】")
+    print("="*80)
     preprocessor.clean_data(
         drop_columns=None,
         handle_missing='smart',
@@ -245,13 +309,33 @@ def main():
     )
     
     feature_cols = preprocessor.get_feature_columns()
-    train_data, test_data = preprocessor.prepare_train_test(by_time=True)
+    train_data_1, test_data_1 = preprocessor.prepare_train_test(by_time=True)
     preprocessor.save_processed_data()
     
-    print(f"✓ 預處理完成: {preprocessor.df_processed.shape} | 欄位: {preprocessor.df_processed.shape[1]}")
+    print(f"✓ 預設模式完成: {preprocessor.df_processed.shape} | 欄位: {preprocessor.df_processed.shape[1]}")
     
-    return preprocessor
+    # 模式 2: 簡化模式（零值填充 + 發電比特徵）
+    print("\n" + "="*80)
+    print("【模式 2：簡化模式（零值填充 + 發電比特徵）】")
+    print("="*80)
+    preprocessor2 = SolarDataPreprocessor()
+    preprocessor2.load_data()
+    preprocessor2.explore_data()
+    preprocessor2.clean_data(
+        drop_columns=None,
+        handle_missing='zero',  # 用零值填充缺失值
+        drop_date_columns=True
+    )
+    preprocessor2.create_simplified_mode()  # 創建簡化模式
+    
+    train_data_2, test_data_2 = preprocessor2.prepare_train_test(by_time=True)
+    
+    print(f"✓ 簡化模式完成: {preprocessor2.df_processed.shape} | 欄位: {preprocessor2.df_processed.shape[1]}")
+    print(f"\n【簡化模式新欄位】")
+    print(f"欄位列表: {list(preprocessor2.df_processed.columns)}")
+    
+    return preprocessor, preprocessor2
 
 
 if __name__ == '__main__':
-    preprocessor = main()
+    preprocessor1, preprocessor2 = main()

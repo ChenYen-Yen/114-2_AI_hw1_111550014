@@ -34,8 +34,20 @@ from modules import (
 )
 
 
-def prepare_data():
-    """準備訓練數據"""
+def prepare_data(mode='remove_date'):
+    """
+    準備訓練數據
+    
+    Args:
+        mode: 預處理模式
+            - 'remove_date': 移除日期欄位，使用平均值填充缺失值（默認）
+            - 'simplified_data': 簡化模式，移除年度/月份/平均單位發電量，合併發電比，用零值填充
+    
+    Returns:
+        prep: 預處理器實例
+        train_data: 訓練數據
+        test_data: 測試數據
+    """
     print("【載入資料】")
     
     # 初始化預處理器
@@ -47,16 +59,37 @@ def prepare_data():
     # 探索數據
     prep.explore_data()
     
-    # 清理數據（刪除日期欄位，處理缺失值）
-    prep.clean_data(
-        drop_columns=None,
-        handle_missing='smart',  # 特別處理 T 值
-        drop_date_columns=True   # 刪除日期欄位
-    )
-    
-    # 不添加新特徵，保持原始欄位
-    print("\n【特徵工程】")
-    print("✓ 跳過欄位添加（保持精簡，先用原始資料測試）")
+    # 根據模式選擇不同的清理策略
+    if mode == 'remove_date':
+        print(f"\n【預處理模式：{mode}】")
+        print("✓ 移除日期欄位 + 平均值填充")
+        
+        # 清理數據（刪除日期欄位，處理缺失值）
+        prep.clean_data(
+            drop_columns=None,
+            handle_missing='smart',  # 特別處理 T 值 + 平均值填充
+            drop_date_columns=True   # 刪除日期欄位
+        )
+        
+        print("\n【特徵工程】")
+        print("✓ 保持原始欄位結構")
+        
+    elif mode == 'simplified_data':
+        print(f"\n【預處理模式：{mode}】")
+        print("✓ 簡化模式：移除年度/月份，合併發電比，零值填充")
+        
+        # 清理數據（使用零值填充）
+        prep.clean_data(
+            drop_columns=None,
+            handle_missing='zero',   # 零值填充
+            drop_date_columns=True
+        )
+        
+        # 創建簡化模式
+        prep.create_simplified_mode()
+        
+    else:
+        raise ValueError(f"未知的預處理模式: {mode}。請使用 'remove_date' 或 'simplified_data'")
     
     # 準備訓練集和測試集
     train_data, test_data = prep.prepare_train_test(by_time=True)
@@ -65,19 +98,26 @@ def prepare_data():
 
 
 def extract_features_and_target(data, prep, 
-                                 target_col='發電量(度)/Power Generation(kWh)'):
+                                 target_col=None):
     """
     從數據框中提取特徵和目標變量
     
     Args:
         data: 輸入 DataFrame
         prep: SolarDataPreprocessor 實例
-        target_col: 目標欄位名稱
+        target_col: 目標欄位名稱（如果為 None 則自動檢測）
     
     Returns:
         features: 特徵 DataFrame（僅數值列）
         targets: 目標 Series
     """
+    # 自動檢測目標列（優先檢測簡化模式的目標列）
+    if target_col is None:
+        if '發電比_Power_Ratio' in data.columns:
+            target_col = '發電比_Power_Ratio'
+        else:
+            target_col = '發電量(度)/Power Generation(kWh)'
+    
     # 取得預處理器中定義的特徵欄位
     feature_cols = prep.get_feature_columns()
     
@@ -593,6 +633,16 @@ def plot_regression_results(model_name, y_test, y_pred, metrics, result_dir):
     
     residuals = y_test - y_pred
     
+    # 檢測目標變量類型以調整標籤
+    is_power_ratio = '發電比' in str(y_test.name) if hasattr(y_test, 'name') else False
+    
+    if is_power_ratio:
+        y_unit = '(無單位)'
+        target_desc = '發電比'
+    else:
+        y_unit = '(kWh)'
+        target_desc = '發電量(度)'
+    
     # 建立 2x2 子圖
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
     fig.suptitle(f'{model_name} - 迴歸性能可視化', fontsize=16, fontweight='bold')
@@ -603,8 +653,8 @@ def plot_regression_results(model_name, y_test, y_pred, metrics, result_dir):
     min_val = min(y_test.min(), y_pred.min())
     max_val = max(y_test.max(), y_pred.max())
     ax1.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='完美預測')
-    ax1.set_xlabel('實際值 (kWh)', fontsize=11)
-    ax1.set_ylabel('預測值 (kWh)', fontsize=11)
+    ax1.set_xlabel(f'實際值 {y_unit}', fontsize=11)
+    ax1.set_ylabel(f'預測值 {y_unit}', fontsize=11)
     ax1.set_title('實際 vs 預測', fontsize=12, fontweight='bold')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
@@ -613,7 +663,7 @@ def plot_regression_results(model_name, y_test, y_pred, metrics, result_dir):
     ax2 = axes[0, 1]
     ax2.hist(residuals, bins=30, edgecolor='black', alpha=0.7, color='skyblue')
     ax2.axvline(0, color='red', linestyle='--', linewidth=2, label='零誤差')
-    ax2.set_xlabel('殘差 (kWh)', fontsize=11)
+    ax2.set_xlabel(f'殘差 {y_unit}', fontsize=11)
     ax2.set_ylabel('頻率', fontsize=11)
     ax2.set_title('殘差分佈', fontsize=12, fontweight='bold')
     ax2.legend()
@@ -623,8 +673,8 @@ def plot_regression_results(model_name, y_test, y_pred, metrics, result_dir):
     ax3 = axes[1, 0]
     ax3.scatter(y_pred, residuals, alpha=0.5, s=20)
     ax3.axhline(0, color='red', linestyle='--', linewidth=2)
-    ax3.set_xlabel('預測值 (kWh)', fontsize=11)
-    ax3.set_ylabel('殘差 (kWh)', fontsize=11)
+    ax3.set_xlabel(f'預測值 {y_unit}', fontsize=11)
+    ax3.set_ylabel(f'殘差 {y_unit}', fontsize=11)
     ax3.set_title('預測值 vs 殘差', fontsize=12, fontweight='bold')
     ax3.grid(True, alpha=0.3)
     
@@ -632,13 +682,18 @@ def plot_regression_results(model_name, y_test, y_pred, metrics, result_dir):
     ax4 = axes[1, 1]
     ax4.axis('off')
     
+    if is_power_ratio:
+        format_str = '{:.4f}'
+    else:
+        format_str = '{:,.0f}'
+    
     metrics_text = f"""
     【模型評估指標】
     
     R² Score:        {metrics['r2']:.4f}
     
-    RMSE:            {metrics['rmse']:,.2f} kWh
-    MAE:             {metrics['mae']:,.2f} kWh
+    RMSE:            {format_str.format(metrics['rmse'])} {y_unit}
+    MAE:             {format_str.format(metrics['mae'])} {y_unit}
     MSE:             {metrics['mse']:.2f}
     
     MAPE:            {metrics['mape']:.2f}%
@@ -646,17 +701,17 @@ def plot_regression_results(model_name, y_test, y_pred, metrics, result_dir):
     【數據統計】
     
     測試集樣本數:     {len(y_test)}
-    實際值範圍:       {y_test.min():,.0f} ~ {y_test.max():,.0f} kWh
-    實際值平均:       {y_test.mean():,.0f} kWh
-    實際值標準差:     {y_test.std():,.0f} kWh
+    實際值範圍:       {format_str.format(y_test.min())} ~ {format_str.format(y_test.max())} {y_unit}
+    實際值平均:       {format_str.format(y_test.mean())} {y_unit}
+    實際值標準差:     {format_str.format(y_test.std())} {y_unit}
     
-    預測值平均:       {y_pred.mean():,.0f} kWh
-    預測值標準差:     {y_pred.std():,.0f} kWh
+    預測值平均:       {format_str.format(y_pred.mean())} {y_unit}
+    預測值標準差:     {format_str.format(y_pred.std())} {y_unit}
     
     【殘差統計】
     
-    殘差平均:         {residuals.mean():,.0f} kWh
-    殘差標準差:       {residuals.std():,.0f} kWh
+    殘差平均:         {format_str.format(residuals.mean())} {y_unit}
+    殘差標準差:       {format_str.format(residuals.std())} {y_unit}
     """
     
     ax4.text(0.05, 0.95, metrics_text, transform=ax4.transAxes,
@@ -681,6 +736,9 @@ def plot_model_comparison(xgb_results, tabnet_results, result_dir):
     result_dir = Path(result_dir)
     result_dir.mkdir(parents=True, exist_ok=True)
     
+    # 檢測目標變量類型以調整標籤
+    is_power_ratio = '發電比' in str(xgb_results['y_test'].name) or '發電比' in str(tabnet_results['y_test'].name)
+    
     # 準備數據
     models = ['XGBoost', 'TabNet']
     r2_scores = [xgb_results['metrics']['r2'], tabnet_results['metrics']['r2']]
@@ -689,6 +747,18 @@ def plot_model_comparison(xgb_results, tabnet_results, result_dir):
     
     fig, axes = plt.subplots(1, 3, figsize=(16, 5))
     fig.suptitle('XGBoost vs TabNet 模型性能對比', fontsize=14, fontweight='bold')
+    
+    # 根據目標變量類型調整標籤
+    if is_power_ratio:
+        mae_label = 'MAE (發電比誤差)'
+        rmse_label = 'RMSE (發電比誤差)'
+        mae_offset = max(mae_scores) * 0.05
+        rmse_offset = max(rmse_scores) * 0.05
+    else:
+        mae_label = 'MAE (kWh)'
+        rmse_label = 'RMSE (kWh)'
+        mae_offset = 5000
+        rmse_offset = 10000
     
     # R² 對比
     ax1 = axes[0]
@@ -704,20 +774,28 @@ def plot_model_comparison(xgb_results, tabnet_results, result_dir):
     # MAE 對比
     ax2 = axes[1]
     bars2 = ax2.bar(models, mae_scores, color=['#1f77b4', '#ff7f0e'], alpha=0.7, edgecolor='black')
-    ax2.set_ylabel('MAE (kWh)', fontsize=11)
+    ax2.set_ylabel(mae_label, fontsize=11)
     ax2.set_title('平均絕對誤差（越低越好）', fontsize=12, fontweight='bold')
     for i, (bar, val) in enumerate(zip(bars2, mae_scores)):
-        ax2.text(bar.get_x() + bar.get_width()/2, val + 5000, f'{val:,.0f}',
+        if is_power_ratio:
+            label = f'{val:.4f}'
+        else:
+            label = f'{val:,.0f}'
+        ax2.text(bar.get_x() + bar.get_width()/2, val + mae_offset, label,
                 ha='center', va='bottom', fontsize=10, fontweight='bold')
     ax2.grid(True, alpha=0.3, axis='y')
     
     # RMSE 對比
     ax3 = axes[2]
     bars3 = ax3.bar(models, rmse_scores, color=['#1f77b4', '#ff7f0e'], alpha=0.7, edgecolor='black')
-    ax3.set_ylabel('RMSE (kWh)', fontsize=11)
+    ax3.set_ylabel(rmse_label, fontsize=11)
     ax3.set_title('均方根誤差（越低越好）', fontsize=12, fontweight='bold')
     for i, (bar, val) in enumerate(zip(bars3, rmse_scores)):
-        ax3.text(bar.get_x() + bar.get_width()/2, val + 10000, f'{val:,.0f}',
+        if is_power_ratio:
+            label = f'{val:.4f}'
+        else:
+            label = f'{val:,.0f}'
+        ax3.text(bar.get_x() + bar.get_width()/2, val + rmse_offset, label,
                 ha='center', va='bottom', fontsize=10, fontweight='bold')
     ax3.grid(True, alpha=0.3, axis='y')
     
@@ -834,14 +912,19 @@ def compare_models(xgb_results, tabnet_results):
     return
 
 
-def main():
-    """主執行函數"""
+def main(mode='remove_date'):
+    """
+    主執行函數
+    
+    Args:
+        mode: 預處理模式 ('remove_date' 或 'simplified_data')
+    """
     print("\n" + "="*80)
-    print("太陽能發電量預測 - 模型訓練與評估（包含交叉驗證）")
+    print(f"太陽能發電量預測 - 模型訓練與評估（模式: {mode}）")
     print("="*80)
     
-    # 準備數據
-    prep, train_data, test_data = prepare_data()
+    # 準備數據（根據指定的模式）
+    prep, train_data, test_data = prepare_data(mode=mode)
     
     # 提取訓練數據用於交叉驗證
     X_train_full, y_train_full = extract_features_and_target(train_data, prep)
@@ -981,4 +1064,25 @@ def main():
 
 
 if __name__ == '__main__':
-    results = main()
+    import sys
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='太陽能發電量預測 - 模型訓練與評估'
+    )
+    parser.add_argument(
+        '--mode',
+        type=str,
+        choices=['remove_date', 'simplified_data'],
+        default='remove_date',
+        help='預處理模式：\n'
+             '  remove_date: 移除日期欄位，使用平均值填充缺失值（默認）\n'
+             '  simplified_data: 簡化模式，移除年度/月份/平均單位發電量，合併發電比，用零值填充'
+    )
+    
+    args = parser.parse_args()
+    
+    print(f"\n【執行參數】")
+    print(f"預處理模式: {args.mode}")
+    
+    results = main(mode=args.mode)
